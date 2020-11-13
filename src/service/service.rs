@@ -1,22 +1,37 @@
 use crate::service::template::TEMPLATE;
+use itertools::Itertools;
+use regex::{Match, Regex};
 use std::fs::File;
 use std::io::{self, Write};
 use std::path::PathBuf;
 
 pub fn create_struct_list_service(str: &String) -> Vec<String> {
-    return str
-        .lines()
-        .filter(|v| v.contains("struct"))
-        .map(|t| {
-            let strs: Vec<&str> = t.split_whitespace().collect();
-            for i in 0..strs.len() - 1 {
-                if i < strs.len() - 2 && strs[i + 1] == "struct" {
-                    return String::from(strs[i]);
-                }
-            }
-            return String::new();
+    let i = Regex::new(r"[ ]*\S+[ ]+struct[ ]*\{").unwrap();
+    return Regex::new(r"type[ ]*\S+[ ]+struct[ ]*\{")
+        .unwrap()
+        .find_iter(str.as_str())
+        .map(|v| {
+            v.as_str()
+                .replace("struct", "")
+                .replace("type", "")
+                .replace("{", "")
+                .replace(" ", "")
         })
-        .filter(|v| !v.is_empty())
+        .chain(
+            Regex::new(r"type[ \t]*\([\r\n \t\S]*?\)")
+                .unwrap()
+                .find_iter(str.as_str())
+                .flat_map(|v| {
+                    println!("{}", v.as_str());
+                    return i.find_iter(v.as_str());
+                })
+                .map(|v| {
+                    v.as_str()
+                        .replace("struct", "")
+                        .replace(" ", "")
+                        .replace("{", "")
+                }),
+        )
         .collect();
 }
 

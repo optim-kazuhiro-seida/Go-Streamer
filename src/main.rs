@@ -14,7 +14,7 @@ fn main() {
 
     read_file_infos(&String::from(dir))
         .into_iter()
-        .filter(|v| v.path.contains(".go"))
+        .filter(|v| v.path.ends_with(".go"))
         .for_each(|f| {
             if let Some(package_line) = f.value.split("\n").find(|v| v.contains("package")) {
                 if let Some(package) = package_line.split(" ").find(|v| !v.contains("package")) {
