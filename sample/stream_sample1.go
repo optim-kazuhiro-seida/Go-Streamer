@@ -5,7 +5,9 @@ import (
 	"reflect"
 	"sort"
 )
+
 type Sample1Stream []Sample1
+
 func Sample1StreamOf(arg ...Sample1) Sample1Stream {
 	return arg
 }
@@ -13,12 +15,12 @@ func Sample1StreamFrom(arg []Sample1) Sample1Stream {
 	return arg
 }
 func CreateSample1Stream(arg ...Sample1) *Sample1Stream {
-    tmp := Sample1StreamOf(arg...)
-    return &tmp
+	tmp := Sample1StreamOf(arg...)
+	return &tmp
 }
 func GenerateSample1Stream(arg []Sample1) *Sample1Stream {
-    tmp := Sample1StreamFrom(arg)
-    return &tmp
+	tmp := Sample1StreamFrom(arg)
+	return &tmp
 }
 
 func (self *Sample1Stream) Add(arg Sample1) *Sample1Stream {
@@ -29,9 +31,9 @@ func (self *Sample1Stream) AddAll(arg ...Sample1) *Sample1Stream {
 	return self
 }
 func (self *Sample1Stream) AddSafe(arg *Sample1) *Sample1Stream {
-    if arg != nil {
-        self.Add(*arg)
-    }
+	if arg != nil {
+		self.Add(*arg)
+	}
 	return self
 }
 func (self *Sample1Stream) AllMatch(fn func(Sample1, int) bool) bool {
@@ -65,7 +67,8 @@ func (self *Sample1Stream) Contains(arg Sample1) bool {
 	return self.FindIndex(func(_arg Sample1, index int) bool { return reflect.DeepEqual(_arg, arg) }) != -1
 }
 func (self *Sample1Stream) Clean() *Sample1Stream {
-    return CreateSample1Stream()
+	*self = Sample1StreamOf()
+	return self
 }
 func (self *Sample1Stream) Delete(index int) *Sample1Stream {
 	return self.DeleteRange(index, index)
@@ -75,14 +78,32 @@ func (self *Sample1Stream) DeleteRange(startIndex, endIndex int) *Sample1Stream 
 	return self
 }
 func (self *Sample1Stream) Distinct() *Sample1Stream {
-	stack := Sample1StreamOf()
-	return self.Filter(func(arg Sample1, _ int) bool {
-		if !stack.Contains(arg) {
-			stack.Add(arg)
-			return true
+	caches := map[Sample1]bool{}
+	result := Sample1StreamOf()
+	for _, v := range *self {
+		if f, ok := caches[v]; ok {
+			if !f {
+				result = append(result, v)
+			}
+		} else if caches[v] = true; !f {
+			result = append(result, v)
 		}
-		return false
-	})
+
+	}
+	*self = result
+	return self
+}
+func (self *Sample1Stream) Each(fn func(Sample1)) *Sample1Stream {
+	for _, v := range *self {
+		fn(v)
+	}
+	return self
+}
+func (self *Sample1Stream) EachRight(fn func(Sample1)) *Sample1Stream {
+	for i := self.Len() - 1; i >= 0; i-- {
+		fn(*self.Get(i))
+	}
+	return self
 }
 func (self *Sample1Stream) Equals(arr []Sample1) bool {
 	if (*self == nil) != (arr == nil) || len(*self) != len(arr) {
@@ -96,24 +117,49 @@ func (self *Sample1Stream) Equals(arr []Sample1) bool {
 	return true
 }
 func (self *Sample1Stream) Filter(fn func(Sample1, int) bool) *Sample1Stream {
-	_array := Sample1StreamOf()
-	self.ForEach(func(v Sample1, i int) {
+	result := Sample1StreamOf()
+	for i, v := range *self {
 		if fn(v, i) {
-			_array.Add(v)
+			result.Add(v)
 		}
-	})
-	*self = _array
+	}
+	*self = result
+	return self
+}
+func (self *Sample1Stream) FilterSlim(fn func(Sample1, int) bool) *Sample1Stream {
+	result := Sample1StreamOf()
+	caches := map[Sample1]bool{}
+	for i, v := range *self {
+		if f, ok := caches[v]; ok {
+			if f {
+				result.Add(v)
+			}
+		} else if caches[v] = fn(v, i); caches[v] {
+			result.Add(v)
+
+		}
+	}
+	*self = result
 	return self
 }
 func (self *Sample1Stream) Find(fn func(Sample1, int) bool) *Sample1 {
-	i := self.FindIndex(fn)
-	if -1 != i {
-		return &(*self)[i]
+	if i := self.FindIndex(fn); -1 != i {
+		tmp := (*self)[i]
+		return &tmp
 	}
 	return nil
 }
+func (self *Sample1Stream) FindOr(fn func(Sample1, int) bool, or Sample1) Sample1 {
+	if v := self.Find(fn); v != nil {
+		return *v
+	}
+	return or
+}
 func (self *Sample1Stream) FindIndex(fn func(Sample1, int) bool) int {
-	for i, v := range self.Val() {
+	if self == nil {
+		return -1
+	}
+	for i, v := range *self {
 		if fn(v, i) {
 			return i
 		}
@@ -123,8 +169,14 @@ func (self *Sample1Stream) FindIndex(fn func(Sample1, int) bool) int {
 func (self *Sample1Stream) First() *Sample1 {
 	return self.Get(0)
 }
+func (self *Sample1Stream) FirstOr(arg Sample1) Sample1 {
+	if v := self.Get(0); v != nil {
+		return *v
+	}
+	return arg
+}
 func (self *Sample1Stream) ForEach(fn func(Sample1, int)) *Sample1Stream {
-	for i, v := range self.Val() {
+	for i, v := range *self {
 		fn(v, i)
 	}
 	return self
@@ -136,17 +188,16 @@ func (self *Sample1Stream) ForEachRight(fn func(Sample1, int)) *Sample1Stream {
 	return self
 }
 func (self *Sample1Stream) GroupBy(fn func(Sample1, int) string) map[string][]Sample1 {
-    m := map[string][]Sample1{}
-    for i, v := range self.Val() {
-        key := fn(v, i)
-        m[key] = append(m[key], v)
-    }
-    return m
+	m := map[string][]Sample1{}
+	for i, v := range self.Val() {
+		key := fn(v, i)
+		m[key] = append(m[key], v)
+	}
+	return m
 }
 func (self *Sample1Stream) GroupByValues(fn func(Sample1, int) string) [][]Sample1 {
-	tmp := [][]Sample1{}
-	m := self.GroupBy(fn)
-	for _, v := range m {
+	var tmp [][]Sample1
+	for _, v := range self.GroupBy(fn) {
 		tmp = append(tmp, v)
 	}
 	return tmp
@@ -168,8 +219,14 @@ func (self *Sample1Stream) IsPreset() bool {
 func (self *Sample1Stream) Last() *Sample1 {
 	return self.Get(self.Len() - 1)
 }
+func (self *Sample1Stream) LastOr(arg Sample1) Sample1 {
+	if v := self.Last(); v != nil {
+		return *v
+	}
+	return arg
+}
 func (self *Sample1Stream) Len() int {
-    if self == nil {
+	if self == nil {
 		return 0
 	}
 	return len(*self)
@@ -178,10 +235,7 @@ func (self *Sample1Stream) Limit(limit int) *Sample1Stream {
 	self.Slice(0, limit)
 	return self
 }
-func (self *Sample1Stream) Map(fn func(Sample1, int) Sample1) *Sample1Stream {
-	return self.ForEach(func(v Sample1, i int) { self.Set(i, fn(v, i)) })
-}
-func (self *Sample1Stream) MapAny(fn func(Sample1, int) interface{}) []interface{} {
+func (self *Sample1Stream) Map(fn func(Sample1, int) interface{}) interface{} {
 	_array := make([]interface{}, 0, len(*self))
 	for i, v := range *self {
 		_array = append(_array, fn(v, i))
@@ -282,22 +336,28 @@ func (self *Sample1Stream) NoneMatch(fn func(Sample1, int) bool) bool {
 func (self *Sample1Stream) Get(index int) *Sample1 {
 	if self.Len() > index && index >= 0 {
 		tmp := (*self)[index]
-        return &tmp
+		return &tmp
 	}
 	return nil
 }
+func (self *Sample1Stream) GetOr(index int, arg Sample1) Sample1 {
+	if v := self.Get(index); v != nil {
+		return *v
+	}
+	return arg
+}
 func (self *Sample1Stream) Peek(fn func(*Sample1, int)) *Sample1Stream {
-    for i, v := range *self {
-        fn(&v, i)
-        self.Set(i, v)
-    }
-    return self
+	for i, v := range *self {
+		fn(&v, i)
+		self.Set(i, v)
+	}
+	return self
 }
 func (self *Sample1Stream) Reduce(fn func(Sample1, Sample1, int) Sample1) *Sample1Stream {
 	return self.ReduceInit(fn, Sample1{})
 }
 func (self *Sample1Stream) ReduceInit(fn func(Sample1, Sample1, int) Sample1, initialValue Sample1) *Sample1Stream {
-	result :=Sample1StreamOf()
+	result := Sample1StreamOf()
 	self.ForEach(func(v Sample1, i int) {
 		if i == 0 {
 			result.Add(fn(initialValue, v, i))
@@ -403,17 +463,16 @@ func (self *Sample1Stream) Reverse() *Sample1Stream {
 	return self
 }
 func (self *Sample1Stream) Replace(fn func(Sample1, int) Sample1) *Sample1Stream {
-	return self.Map(fn)
+	return self.ForEach(func(v Sample1, i int) { self.Set(i, fn(v, i)) })
 }
 func (self *Sample1Stream) Set(index int, val Sample1) *Sample1Stream {
-    if len(*self) > index {
-        (*self)[index] = val
-    }
-    return self
+	if len(*self) > index && index >= 0 {
+		(*self)[index] = val
+	}
+	return self
 }
 func (self *Sample1Stream) Skip(skip int) *Sample1Stream {
-	self.Slice(skip, self.Len()-skip)
-	return self
+	return self.Slice(skip, self.Len()-skip)
 }
 func (self *Sample1Stream) SkippingEach(fn func(Sample1, int) int) *Sample1Stream {
 	for i := 0; i < self.Len(); i++ {
@@ -423,23 +482,25 @@ func (self *Sample1Stream) SkippingEach(fn func(Sample1, int) int) *Sample1Strea
 	return self
 }
 func (self *Sample1Stream) Slice(startIndex, n int) *Sample1Stream {
-    last := startIndex+n
-    if len(*self)-1 < startIndex {
-        *self = []Sample1{}
-    } else if len(*self) < last {
-        *self = (*self)[startIndex:len(*self)]
-    } else {
-        *self = (*self)[startIndex:last]
-    }
+	if last := startIndex + n; len(*self)-1 < startIndex || last < 0 || startIndex < 0 {
+		*self = []Sample1{}
+	} else if len(*self) < last {
+		*self = (*self)[startIndex:len(*self)]
+	} else {
+		*self = (*self)[startIndex:last]
+	}
 	return self
 }
 func (self *Sample1Stream) Sort(fn func(i, j int) bool) *Sample1Stream {
-	sort.Slice(*self, fn)
-	return self
-}
-func (self *Sample1Stream) SortStable(fn func(i, j int) bool) *Sample1Stream {
 	sort.SliceStable(*self, fn)
 	return self
+}
+
+func (self *Sample1Stream) Tail() *Sample1 {
+	return self.Last()
+}
+func (self *Sample1Stream) TailOr(arg Sample1) Sample1 {
+	return self.LastOr(arg)
 }
 func (self *Sample1Stream) ToList() []Sample1 {
 	return self.Val()
@@ -454,10 +515,10 @@ func (self *Sample1Stream) Val() []Sample1 {
 	return *self.Copy()
 }
 func (self *Sample1Stream) While(fn func(Sample1, int) bool) *Sample1Stream {
-    for i, v := range self.Val() {
-        if !fn(v, i) {
-            break
-        }
-    }
-    return self
+	for i, v := range self.Val() {
+		if !fn(v, i) {
+			break
+		}
+	}
+	return self
 }

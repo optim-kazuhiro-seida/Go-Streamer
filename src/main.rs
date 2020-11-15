@@ -2,7 +2,7 @@ mod service;
 mod util;
 
 use itertools::Itertools;
-use service::service::{create_struct_list_service, save_struct_stream};
+use service::service::{create_struct_list_service, save_struct_func, save_struct_stream};
 use std::env;
 use util::file::read_file_infos;
 
@@ -25,7 +25,10 @@ fn main() {
                             str.chars()
                                 .all(|c| c.is_ascii_alphabetic() || c.is_ascii_alphanumeric())
                         })
-                        .for_each(|v| save_struct_stream(&v, &package.to_string(), &f.path));
+                        .for_each(|v| {
+                            save_struct_stream(&v, &package.to_string(), &f.path);
+                            save_struct_func(&v, &package.to_string(), &f.path)
+                        });
                 }
             }
         });

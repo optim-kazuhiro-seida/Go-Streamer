@@ -1,6 +1,10 @@
 package sample
 
 type (
+    Sample struct {
+        Str string
+        Int int
+    }
     Sample0 struct {}
     Sample1 struct {}
     Sample2 struct {}
@@ -13,7 +17,3 @@ type Sample5 struct {
     bbbb string
 }
 
-
-func a() {
-    a := struct{}{}
-}

@@ -1,6 +1,5 @@
-use crate::service::template::TEMPLATE;
-use itertools::Itertools;
-use regex::{Match, Regex};
+use crate::service::template::{TEMPLATE, TEMPLATE_FUNC};
+use regex::Regex;
 use std::fs::File;
 use std::io::{self, Write};
 use std::path::PathBuf;
@@ -54,6 +53,29 @@ pub fn save_struct_stream(struct_str: &String, package: &String, path: &String) 
             )
             .expect("Fail save file.");
             println!("{} {}", "Completed ", struct_str.to_lowercase())
+        }
+        Err(err) => eprintln!("{}", err),
+    }
+}
+pub fn save_struct_func(struct_str: &String, package: &String, path: &String) {
+    let mut p = PathBuf::from(path.as_str());
+    p.set_file_name(format!(
+        "{}{}{}",
+        "function_",
+        struct_str.to_lowercase(),
+        ".go"
+    ));
+    match File::create(p) {
+        Ok(mut file) => {
+            file.write_all(
+                TEMPLATE_FUNC
+                    .to_string()
+                    .replace("{{.TypeName}}", struct_str.as_str())
+                    .replace("{{.PackageName}}", package)
+                    .as_bytes(),
+            )
+            .expect("Fail save file.");
+            println!("{} {}", "Completed Func", struct_str.to_lowercase())
         }
         Err(err) => eprintln!("{}", err),
     }
