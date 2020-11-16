@@ -37,6 +37,18 @@ func (self *{{.TypeName}}Stream) AddSafe(arg *{{.TypeName}}) *{{.TypeName}}Strea
 	}
 	return self
 }
+func (self *{{.TypeName}}Stream) Aggregate(fn func({{.TypeName}}, {{.TypeName}}) {{.TypeName}}) *{{.TypeName}}Stream {
+	result := {{.TypeName}}StreamOf()
+	self.ForEach(func(v {{.TypeName}}, i int) {
+		if i == 0 {
+			result.Add(fn({{.TypeName}}{}, v))
+		} else {
+			result.Add(fn(result[i-1], v))
+		}
+	})
+	*self = result
+	return self
+}
 func (self *{{.TypeName}}Stream) AllMatch(fn func({{.TypeName}}, int) bool) bool {
 	for i, v := range *self {
 		if !fn(v, i) {
@@ -236,6 +248,7 @@ func (self *{{.TypeName}}Stream) Limit(limit int) *{{.TypeName}}Stream {
 	self.Slice(0, limit)
 	return self
 }
+
 func (self *{{.TypeName}}Stream) Map(fn func({{.TypeName}}, int) interface{}) interface{} {
 	_array := make([]interface{}, 0, len(*self))
 	for i, v := range *self {
@@ -354,6 +367,8 @@ func (self *{{.TypeName}}Stream) Peek(fn func(*{{.TypeName}}, int)) *{{.TypeName
 	}
 	return self
 }
+
+
 func (self *{{.TypeName}}Stream) Reduce(fn func({{.TypeName}}, {{.TypeName}}, int) {{.TypeName}}) *{{.TypeName}}Stream {
 	return self.ReduceInit(fn, {{.TypeName}}{})
 }
@@ -466,6 +481,13 @@ func (self *{{.TypeName}}Stream) Reverse() *{{.TypeName}}Stream {
 func (self *{{.TypeName}}Stream) Replace(fn func({{.TypeName}}, int) {{.TypeName}}) *{{.TypeName}}Stream {
 	return self.ForEach(func(v {{.TypeName}}, i int) { self.Set(i, fn(v, i)) })
 }
+func (self *{{.TypeName}}Stream) Select(fn func({{.TypeName}}) interface{}) interface{} {
+	_array := make([]interface{}, 0, len(*self))
+	for _, v := range *self {
+		_array = append(_array, fn(v))
+	}
+	return _array
+}
 func (self *{{.TypeName}}Stream) Set(index int, val {{.TypeName}}) *{{.TypeName}}Stream {
 	if len(*self) > index && index >= 0 {
 		(*self)[index] = val
@@ -521,6 +543,31 @@ func (self *{{.TypeName}}Stream) While(fn func({{.TypeName}}, int) bool) *{{.Typ
 			break
 		}
 	}
+	return self
+}
+func (self *{{.TypeName}}Stream) Where(fn func({{.TypeName}}) bool) *{{.TypeName}}Stream {
+	result := {{.TypeName}}StreamOf()
+	for _, v := range *self {
+		if fn(v) {
+			result.Add(v)
+		}
+	}
+	*self = result
+	return self
+}
+func (self *{{.TypeName}}Stream) WhereSlim(fn func({{.TypeName}}) bool) *{{.TypeName}}Stream {
+	result := {{.TypeName}}StreamOf()
+	caches := map[{{.TypeName}}]bool{}
+	for _, v := range *self {
+		if f, ok := caches[v]; ok {
+			if f {
+				result.Add(v)
+			}
+		} else if caches[v] = fn(v); caches[v] {
+			result.Add(v)
+		}
+	}
+	*self = result
 	return self
 }
 ";
