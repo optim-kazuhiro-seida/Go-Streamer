@@ -1,6 +1,6 @@
 [package]
-name = "go_struct_generator"
-version = "0.1.0"
+name = "go_streamer"
+version = "0.3.4"
 authors = ["kazuhiro.seida"]
 edition = "2018"
 

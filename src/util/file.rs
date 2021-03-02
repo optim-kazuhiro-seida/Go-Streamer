@@ -1,7 +1,6 @@
 use std::fs;
-use std::fs::read_to_string;
+use std::fs::{metadata, read_to_string};
 use std::path::PathBuf;
-
 pub struct FileStringInfo {
     pub path: String,
     pub value: String,
@@ -17,14 +16,16 @@ impl FileStringInfo {
     }
 }
 
-pub fn read_file_infos(path: &String) -> Vec<FileStringInfo> {
+pub fn read_file_infos(path: &String, recursion: bool) -> Vec<FileStringInfo> {
     let mut result: Vec<FileStringInfo> = vec![];
     let dir = read_file_info(&path);
-    println!("{}", dir.clone().path);
     result.push(dir.clone());
-    dir.child_dir
-        .iter()
-        .for_each(|c| result.append(&mut read_file_infos(&c)));
+    dir.child_dir.iter().for_each(|c| {
+        if recursion || metadata(&c).unwrap().is_file() {
+            println!("{}", &c);
+            result.append(&mut read_file_infos(&c, recursion))
+        }
+    });
     return result;
 }
 
